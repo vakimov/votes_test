@@ -187,12 +187,6 @@ class VotingView(TemplateView):
             self._voting = Voting.objects.get(slug=self.kwargs['slug'])
         return self._voting
 
-    # def get_form_class(self):
-    #     form_class = type(
-    #         'VoteForm', (forms.Form,),
-    #         {'choice_%s' % ch.order: forms.BooleanField(label=ch.description) for ch in self.voting.choices})
-    #     return form_class
-
     def post(self, request, *args, **kwargs):
         try:
             vote_n = int(request.POST.get('vote'))
