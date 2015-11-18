@@ -1,0 +1,40 @@
+<nav class="navbar navbar-default">
+<div class="container-fluid">
+  <div class="navbar-header">
+    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+      <span class="sr-only">Toggle navigation</span>
+      <span class="icon-bar"></span>
+      <span class="icon-bar"></span>
+      <span class="icon-bar"></span>
+    </button>
+    <a class="navbar-brand" href="{% url "vote_home" %}">Голосовалка</a>
+  </div>
+  <div id="navbar" class="navbar-collapse collapse">
+    <ul class="nav navbar-nav">
+    {% if request.user.is_authenticated %}
+      <li {% ifequal section "votings" %}class="active"{% endifequal %}>
+          <a href="{% url "votes_voting_list" %}">Мои голосования</a>
+      </li>
+      <li {% ifequal section "voting_add" %}class="active"{% endifequal %}>
+          <a href="{% url "votes_voting_add" %}">Добавить голосование</a>
+      </li>
+    {% endif %}
+    </ul>
+    <ul class="nav navbar-nav navbar-right">
+    {% if request.user.is_authenticated %}
+      <li><p class="navbar-text navbar-left">{{ user.username }}</p></li>
+      <li {% ifequal section "logout" %}class="active"{% endifequal %}>
+          <a href="{% url "votes_logout" %}?next={{ request.path }}">Выйти</a>
+      </li>
+    {% else %}
+      <li {% ifequal section "login" %}class="active"{% endifequal %}>
+          <a href="{% url "votes_login" %}?next={{ request.path }}">Войти</a>
+      </li>
+      <li {% ifequal section "singup" %}class="active"{% endifequal %}>
+          <a href="{% url "votes_signup" %}?next={{ request.path }}">Зарегестрироватсья</a>
+      </li>
+    {% endif %}
+    </ul>
+  </div><!--/.nav-collapse -->
+</div><!--/.container-fluid -->
+</nav>

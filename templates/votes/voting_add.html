@@ -1,0 +1,106 @@
+{% extends "votes/base.html" %}
+{% block navbar %}{% include "votes/navbar.html" with section="voting_add" %}{% endblock %}
+{% block content %}
+<h1>Создать голосование</h1>
+<div class="row">
+  <div class="col-md-8 col-sm-7 col-xs-6">
+    <form method="post" action="{% url 'votes_voting_add' %}">
+        {% csrf_token %}
+        <div class="form-group{% if form.description.errors %} has-error{% endif %}">
+            {{ form.description.label_tag }}
+            {{ form.description }}
+            {% if form.description.errors %}
+            <span class="help-block">{% for error in form.description.errors %}{% if not forloop.first %}<br>{% endif %}{{ error }}{% endfor %}</span>
+            {% endif %}
+        </div>
+        <input type="hidden" name="next" value="{{ next }}" />
+        {{ choices_formset.management_form }}
+        <table class="table">
+            <thead>
+            <tr>
+                <th>Варианты:
+
+        {% if choices_formset.non_form_errors %}
+        <div class="has-error">
+        <span class="help-block">
+            {%  for error in choices_formset.non_form_errors %}
+                {% if not forloop.first %}<br>{% endif %}{{ error }}
+            {% endfor %}
+        </span>
+        </div>
+        {% endif %}
+                </th>
+            </tr>
+            </thead>
+            <tbody>
+        {% for choices_form in choices_formset.forms %}
+            <tr class="js-inline-choice">
+                <td class="form-inline">
+                    <div class="form-group js-choice-description">
+                        {{ choices_form.description }}
+                    </div>
+                    <a href="javascript:void(0)" class="btn btn-danger btn-sm js-choice-remove">
+                        <span class="glyphicon glyphicon-minus" aria-hidden="true"></span>
+                    </a>
+                </td>
+            </tr>
+        {% endfor %}
+            <tr>
+                <td>
+                    <a href="javascript:void(0)" class="btn btn-success btn-sm js-choice-add">
+                        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                    </a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        {% if form.non_field_errors %}
+        <span class="has-error help-block">
+            {%  for error in form.non_field_errors %}
+                {% if not forloop.first %}<br>{% endif %}{{ error }}
+            {% endfor %}
+        </span>
+        {% endif %}
+        <button type="submit" class="btn btn-default">Создать</button>
+    </form>
+  </div>
+  <div class="col-md-4 col-sm-5 col-xs-6"></div>
+</div>
+{% endblock content %}
+{% block extra_js %}
+<script>
+$(function() {
+    var $form = $('form');
+    var $totalChoiceForms = $form.find('#id_choice_set-TOTAL_FORMS');
+    function reorder() {
+        var $inlineChoices = $form.find('.js-inline-choice');
+        $inlineChoices.each(function(index, choice) {
+            var $choiceDescr = $(choice).find('.js-choice-description input');
+            $choiceDescr.attr('id', 'id_choice_set-' + index + '-description');
+            $choiceDescr.attr('name', 'choice_set-' + index + '-description');
+            $choiceDescr.attr('data-cip-id', 'id_choice_set-' + index + '-description');
+        });
+        $totalChoiceForms.val($inlineChoices.length);
+        if ($inlineChoices.length <= 2) {
+            $form.find('.js-choice-remove').hide();
+        } else {
+            $form.find('.js-choice-remove').show();
+        }
+    }
+    $form.find('.js-choice-add').click(function() {
+        var $inlineChoices = $form.find('.js-inline-choice');
+        var $newChoice = $inlineChoices.first().clone();
+        $newChoice.find('.js-choice-description input').val('');
+        $inlineChoices.last().after($newChoice);
+        reorder()
+    });
+    $form.on('click', '.js-choice-remove', function() {
+        var $inlineChoices = $form.find('.js-inline-choice');
+        if ($inlineChoices.length > 2) {
+            $(this).parents('tr').remove();
+            reorder();
+        }
+    });
+});
+</script>
+{% endblock extra_js %}

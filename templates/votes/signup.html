@@ -1,0 +1,42 @@
+{% extends "votes/base.html" %}
+{% block navbar %}{% include "votes/navbar.html" with section="singup" %}{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-md-8 col-sm-7 col-xs-6"></div>
+  <div class="col-md-4 col-sm-5 col-xs-6">
+    <form method="post" action="{% url 'votes_signup' %}">
+        {% csrf_token %}
+        <div class="form-group{% if form.username.errors %} has-error{% endif %}">
+            {{ form.username.label_tag }}
+            {{ form.username }}
+            {% if form.username.errors %}
+            <span class="help-block">{% for error in form.username.errors %}{% if not forloop.first %}<br>{% endif %}{{ error }}{% endfor %}</span>
+            {% endif %}
+        </div>
+        <div class="form-group{% if form.password.errors %} has-error{% endif %}">
+            {{ form.password.label_tag }}
+            {{ form.password }}
+            {% if form.password.errors %}
+            <span class="help-block">{% for error in form.password.errors %}{% if not forloop.first %}<br>{% endif %}{{ error }}{% endfor %}</span>
+            {% endif %}
+        </div>
+        <div class="form-group{% if form.password_confirm.errors %} has-error{% endif %}">
+            {{ form.password_confirm.label_tag }}
+            {{ form.password_confirm }}
+            {% if form.password_confirm.errors %}
+            <span class="help-block">{% for error in form.password_confirm.errors %}{% if not forloop.first %}<br>{% endif %}{{ error }}{% endfor %}</span>
+            {% endif %}
+        </div>
+        {% if form.non_field_errors %}
+        <div class="has-error">
+            {%  for error in form.non_field_errors %}
+        <span class="help-block">Ошибка {{ error }}!</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <button type="submit" class="btn btn-default">Зарегестрироваться</button>
+        <input type="hidden" name="next" value="{{ next }}" />
+    </form>
+  </div>
+</div>
+{% endblock content %}

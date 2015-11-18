@@ -1,0 +1,29 @@
+{% extends "votes/base.html" %}
+{% block content %}
+<h1>{% block content_title %}Голосования{% endblock %}</h1>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Описание</th>
+            <th>Варианты</th>
+        </tr>
+    </thead>
+    <tbody>
+{% for voting in object_list %}
+    <tr>
+        <td><a href="{% url 'votes_voting_results' slug=voting.slug %}">{{ voting.description }}</a></td>
+        <td>{% for choice in voting.choices %}
+            {% if forloop.first %}<ul>{% endif %}
+            <li>{{ choice.description }}</li>
+            {% if forloop.last %}</ul>{% endif %}
+            {% endfor %}
+        </td>
+    </tr>
+{% empty %}
+    <tr>
+        <td colspan="2">Пока голосований нет.</td>
+    </tr>
+{% endfor %}
+    </tbody>
+</table>
+{% endblock content %}
