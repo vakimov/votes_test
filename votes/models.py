@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 
 
 class Voting(models.Model):
-    # TODO: добавить дату голосования
+    datetime = models.DateTimeField()
     slug = models.SlugField(null=True, blank=True)
     description = models.TextField(verbose_name='Описание')
     user = models.ForeignKey(User)

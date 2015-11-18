@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import hashlib
+import datetime
 
 from django import forms
 from django.http import HttpResponseRedirect, Http404
@@ -60,6 +61,7 @@ class VotingListView(ListView):
     model = Voting
     title = 'Голосования'
     template_name = 'votes/voting_list.html'
+    ordering = '-datetime'
 
 
 class UsersVotingListView(VotingListView):
@@ -101,6 +103,8 @@ class ChoiceFormSet(_ChoiceFormSet):
                 if descriptions.get(description):
                     raise forms.ValidationError('Варианты не должны повторятся')
                 descriptions[description] = True
+        if len(descriptions) < 2:
+            raise forms.ValidationError('Должно быть как минимум два варианта')
         return cleaned_data
 
     def add_fields(self, form, index):
@@ -157,6 +161,7 @@ class VotingAddView(CreateView):
         form_class = self.get_form_class()
         form = self.get_form(form_class)
         form.instance.user = self.request.user
+        form.instance.datetime = datetime.datetime.now()
         choices_formset = ChoiceFormSet(self.request.POST)
         if (form.is_valid() and choices_formset.is_valid() and
             choices_formset.is_valid()):
