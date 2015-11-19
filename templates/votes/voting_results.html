@@ -9,5 +9,9 @@
         {% if choice.votes %}<span class="label label-danger" style="width:{% widthratio choice.votes_percent 1 3 %}px; display:block;">&nbsp;</span>{% endif %}
     </li>{% endfor %}
 </ul>
+    {% if voted %}
+    <span>Вы уже проголосовали.</span>
+    {% else %}
     <a href="{% url 'votes_voting' slug=voting.slug %}" class="btn btn-default">Голосовать</a>
+    {% endif %}
 {% endblock content %}

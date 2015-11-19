@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from datetime import timedelta
+
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -8,6 +10,7 @@ class Voting(models.Model):
     slug = models.SlugField(null=True, blank=True)
     description = models.TextField(verbose_name='Описание')
     user = models.ForeignKey(User)
+    voted_users = models.ManyToManyField(User, related_name='voted_voteings')
 
     @property
     def choices(self):
@@ -19,6 +22,17 @@ class Voting(models.Model):
         for ch in self.choices:
             n += ch.votes
         return n
+
+
+class VotingDelay(models.Model):
+    voting = models.ForeignKey(Voting)
+    ip = models.IPAddressField()
+    delay_level = models.IntegerField(default=0)
+    relieve_datetime = models.DateTimeField()
+
+    @property
+    def delay(self):
+        return min(timedelta(minutes=3 ** self.delay_level), timedelta(days=7))
 
 
 class Choice(models.Model):

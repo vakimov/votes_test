@@ -14,7 +14,11 @@
         </div>
         {% endfor %}
         {% if error %}<p>{{ error }}</p>{% endif %}
+        {% if voted %}
+        <span>Вы уже проголосовали. <a href="{% url 'votes_voting_results' slug=voting.slug %}">К результатам</a></span>
+        {% else %}
         <button type="submit" class="btn btn-default">Голосовать</button>
+        {% endif %}
     </form>
   </div>
   <div class="col-md-4 col-sm-5 col-xs-6"></div>

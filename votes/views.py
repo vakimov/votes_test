@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import hashlib
-import datetime
+from datetime import timedelta
 
 from django import forms
 from django.http import HttpResponseRedirect, Http404
@@ -8,8 +8,9 @@ from django.views.generic import FormView, ListView, CreateView, TemplateView
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse, reverse_lazy
+from django.utils import timezone
 
-from .models import Voting, Choice
+from .models import Voting, Choice, VotingDelay
 from .translit import translit
 
 
@@ -121,6 +122,9 @@ class VotingForm(forms.ModelForm):
             'slug': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
+    def clean_description(self):
+        return self.cleaned_data.get('description', '').strip()
+
     def clean_slug(self):
         slug = self.cleaned_data['slug']
         if not slug:
@@ -161,7 +165,7 @@ class VotingAddView(CreateView):
         form_class = self.get_form_class()
         form = self.get_form(form_class)
         form.instance.user = self.request.user
-        form.instance.datetime = datetime.datetime.now()
+        form.instance.datetime = timezone.now()
         choices_formset = ChoiceFormSet(self.request.POST)
         if (form.is_valid() and choices_formset.is_valid() and
             choices_formset.is_valid()):
@@ -181,8 +185,7 @@ class VotingAddView(CreateView):
                                   choices_formset=choices_formset))
 
 
-class VotingView(TemplateView):
-    template_name = 'votes/voting.html'
+class VotingMixin(object):
 
     _voting = None
 
@@ -192,36 +195,101 @@ class VotingView(TemplateView):
             self._voting = Voting.objects.get(slug=self.kwargs['slug'])
         return self._voting
 
-    def post(self, request, *args, **kwargs):
+    def get_voting_delay(self):
         try:
-            vote_n = int(request.POST.get('vote'))
-            choice = self.voting.choices.get(order=vote_n)
-        except (TypeError, Choice.DoesNotExist):
-            kwargs['error'] = 'А проголосовать?'
-            return self.get(request, *args, **kwargs)
-        choice.votes += 1
-        choice.save()
+            return VotingDelay.objects.get(
+                ip=get_client_ip(self.request), voting=self.voting)
+        except VotingDelay.DoesNotExist:
+            vd = VotingDelay(
+                ip=get_client_ip(self.request), voting=self.voting,
+                relieve_datetime=timezone.now()
+            )
+            vd.save()
+            return vd
+
+    def check_if_voted(self):
+        request = self.request
+        if request.user.is_authenticated():
+            if request.user.id in [d['id'] for d in self.voting.voted_users.values('id')]:
+                return True
+        elif self.voting.id in request.session.get('voted_votings', []):
+            return True
+        vd = self.get_voting_delay()
+        if timezone.now() < vd.relieve_datetime:
+            return True
+        return False
+
+
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+
+class VotingView(VotingMixin, TemplateView):
+    template_name = 'votes/voting.html'
+
+    def update_vote_delay(self):
+        vd = self.get_voting_delay()
+        vd.relieve_datetime = timezone.now() + vd.delay
+        vd.save()
+
+    def check_if_vote_to_much(self, request):
+        if self.check_if_voted():
+            return True
+        vd = self.get_voting_delay()
+        relieve_date = vd.relieve_datetime or timezone.now()
+        if timezone.now() - relieve_date > vd.delay:
+            if vd.delay_level != 0:
+                vd.delay_level = 0
+                vd.save()
+        else:
+            vd.delay_level += 1
+            vd.save()
+        if relieve_date - timezone.now() > timedelta(0):
+            return True
+        return False
+
+    def post(self, request, *args, **kwargs):
+        if not self.check_if_vote_to_much(request):
+            try:
+                vote_n = int(request.POST.get('vote'))
+                choice = self.voting.choices.get(order=vote_n)
+            except (TypeError, Choice.DoesNotExist):
+                kwargs['error'] = 'А проголосовать?'
+                return self.get(request, *args, **kwargs)
+            if request.user.is_authenticated():
+                self.voting.voted_users.add(request.user)
+            else:
+                request.session['voted_votings'] = request.session.get('voted_votings', [])
+                request.session['voted_votings'].append(self.voting.id)
+            self.update_vote_delay()
+            choice.votes += 1
+            choice.save()
         return HttpResponseRedirect(reverse('votes_voting_results', kwargs=kwargs))
 
     def get_context_data(self, **kwargs):
         context = super(VotingView, self).get_context_data(**kwargs)
         try:
             context['voting'] = self.voting
+            context['voted'] = self.check_if_voted()
         except Voting.DoesNotExist:
             raise Http404('Увы. Такого опроса не существует.')
         return context
 
 
-class VotingResultsView(TemplateView):
+class VotingResultsView(VotingMixin, TemplateView):
     template_name = 'votes/voting_results.html'
 
     def get_context_data(self, **kwargs):
         context = super(VotingResultsView, self).get_context_data(**kwargs)
+        context['voted'] = context.get('voted') or self.check_if_voted()
         slug = self.kwargs['slug']
         try:
             context['voting'] = Voting.objects.get(slug=slug)
         except Voting.DoesNotExist:
             raise Http404('Увы. Такого опроса не существует.')
         return context
-
-# TODO: прописывать 'class': 'form-control' автоматом во вьюхе
