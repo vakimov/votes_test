@@ -82,12 +82,14 @@ class ChoiceForm(forms.ModelForm):
         widgets = {
             'description': forms.TextInput(attrs={'class': 'form-control'}),
         }
+
+    def clean_description(self):
+        return self.cleaned_data.get('description', '').strip()
         
     def is_valid(self):
         return super(ChoiceForm, self).is_valid()
 
     def full_clean(self):
-        # self.instance.order = self.prefix
         return super(ChoiceForm, self).full_clean()
 
 
